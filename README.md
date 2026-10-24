@@ -47,19 +47,31 @@ ImageMagick 7.1.2 + libraw 0.22.2, on Nikon Z f NEF files.
 ## Installation
 
 ```sh
+wget -qO- https://raw.githubusercontent.com/good-news-everyone/nautilus-raw-preview/main/install.sh | sh
+nautilus -q
+```
+
+Or from a clone:
+
+```sh
+git clone https://github.com/good-news-everyone/nautilus-raw-preview.git
+cd nautilus-raw-preview
 sh install.sh
 nautilus -q
 ```
 
 The script checks dependencies, installs the thumbnailer to `/usr/local/bin`
 (via `sudo`) and everything else to `~/.local/share`, and clears the
-failed-thumbnail cache so Nautilus retries files it gave up on.
+failed-thumbnail cache so Nautilus retries files it gave up on. When piped
+from `wget`, it downloads the files it needs from this repository.
 
 Uninstall:
 
 ```sh
-sh install.sh --uninstall
+wget -qO- https://raw.githubusercontent.com/good-news-everyone/nautilus-raw-preview/main/install.sh | sh -s -- --uninstall
 ```
+
+or `sh install.sh --uninstall` from a clone.
 
 ## Limitations
 
