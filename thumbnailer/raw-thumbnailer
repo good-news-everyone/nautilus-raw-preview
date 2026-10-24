@@ -1,0 +1,35 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Thumbnailer for camera RAW files: takes the embedded JPEG preview (exiv2)
+# and scales it with ImageMagick, applying the RAW's EXIF orientation.
+# Usage: raw-thumbnailer <input path> <output png> <size>
+in=$1 out=$2 size=$3
+
+# Smallest JPEG preview at least $size (and 600 px, to skip the 4:3 160x120 one)
+# on the long side, else the largest
+n=$(exiv2 -q -pp "$in" 2>/dev/null | awk -v s="$size" '
+    /image\/jpeg/ {
+        split($0, a, /[:, x]+/)            # Preview N: image/jpeg, WxH pixels
+        idx = a[2]; w = a[4]; h = a[5]
+        last = idx
+        if (!pick && (w >= s || h >= s) && w >= 600) pick = idx
+    }
+    END { if (pick || last) print (pick ? pick : last) }')
+if [ -z "$n" ]; then
+    # No usable embedded preview: full decode through ImageMagick's libraw coder
+    exec magick "dng:$in" -auto-orient -thumbnail "${size}x${size}" -strip "png:$out"
+fi
+
+# The sandbox only lets us write next to the output file
+dir=$(dirname "$out")
+base=$(basename "$in"); base=${base%.*}
+jpg="$dir/$base-preview$n.jpg"
+trap 'rm -f "$jpg"' EXIT
+exiv2 -q -f -ep"$n" -l "$dir" "$in" || exit 1
+
+case $(exiv2 -q -K Exif.Image.Orientation -Pv "$in" 2>/dev/null) in
+    2) o=TopRight ;; 3) o=BottomRight ;; 4) o=BottomLeft ;; 5) o=LeftTop ;;
+    6) o=RightTop ;; 7) o=RightBottom ;; 8) o=LeftBottom ;; *) o=TopLeft ;;
+esac
+
+magick "$jpg" -orient "$o" -auto-orient -thumbnail "${size}x${size}" -strip "png:$out"
